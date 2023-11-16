@@ -1,9 +1,9 @@
 import IRoute from '../types/IRoute';
-import {Router} from 'express';
-import {compareSync} from 'bcrypt';
-import {attachSession} from '../middleware/auth';
-import {sequelize, Session, User} from '../services/db';
-import {randomBytes} from 'crypto';
+import { Router } from 'express';
+import { compareSync } from 'bcrypt';
+import { attachSession } from '../middleware/auth';
+import { sequelize, Session, User } from '../services/db';
+import { randomBytes } from 'crypto';
 
 const AuthRouter: IRoute = {
   route: '/auth',
@@ -15,8 +15,8 @@ const AuthRouter: IRoute = {
     router.get('/', (req, res) => {
       if (req.session?.token?.id) {
         const {
-          token: {token, ...session},
-          user: {password, ...user},
+          token: { token, ...session },
+          user: { password, ...user },
         } = req.session;
         return res.json({
           success: true,
@@ -40,6 +40,7 @@ const AuthRouter: IRoute = {
         username,
         password,
       } = req.body;
+
       if (!username || !password) {
         return res.status(400).json({
           success: false,
@@ -72,7 +73,7 @@ const AuthRouter: IRoute = {
 
       // We now know the user is valid so it's time to mint a new session token.
       const sessionToken = randomBytes(32).toString('hex');
-      let session;
+      let session: Session;
       try {
         // Persist the token to the database.
         session = await Session.create({
@@ -111,13 +112,75 @@ const AuthRouter: IRoute = {
     });
 
     // Attempt to register
-    router.post('/register', (req, res) => {
-      // TODO
+    router.post('/register', async (req, res) => {
+      const { username, password, displayName } = req.body;
+      console.log(req.body)
+      if (!username || !password ) {
+        return res.status(400).json({
+          success: false,
+          message: "Username or password is not entered!"
+        })
+      }
+
+      const existingUser = await User.findOne({
+        where: sequelize.where(
+          sequelize.fn('lower', sequelize.col('username')),
+          sequelize.fn('lower', username)
+        )
+      })
+
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: "Username is already taken!"
+        })
+      }
+
+      const newUser = await User.create({
+        username,
+        displayName,
+        password
+      }).catch(error => passError("Failed to create user", error, res))
+      if (!newUser) {
+        return passError("Returned user is void!", null, res)
+      }
+      return res.json({
+        success: true,
+        message: "User is created successfully!"
+      })
     });
 
     // Log out
-    router.post('/logout', (req, res) => {
-      // TODO
+    router.post('/logout', async (req, res) => {
+      const { token } = req.session;
+      if (token) {
+        await Session.destroy({
+          where: { token },
+        }).catch(err => passError('Failed to destroy session.', err, res));
+      }
+
+      res.clearCookie('SESSION_TOKEN');
+
+      return res.json({
+        success: true,
+        message: 'Logged out successfully.',
+      });
+    });
+    // New route to fetch all users
+    router.get('/users', async (req, res) => {
+      try {
+        const users = await User.findAll({
+          attributes: { exclude: ['password'] },
+        });
+
+        return res.json({
+          success: true,
+          message: 'List of users retrieved successfully.',
+          data: users,
+        });
+      } catch (error) {
+        return passError('Failed to fetch users.', error, res);
+      }
     });
 
     return router;

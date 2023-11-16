@@ -25,6 +25,7 @@ User.init({
   },
   registered: {
     type: DataTypes.DATE,
+    defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
   },
   username: {
     type: DataTypes.STRING,

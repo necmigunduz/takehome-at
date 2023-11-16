@@ -30,7 +30,7 @@ queue.forEach(entry => {
     if (required?.default) {
       const {route, router}: IRoute = required.default;
       app.use(route, router());
-
+      
       console.log('Injected route "%s"', route);
     } else {
       console.error('Invalid route: "%s". No `default` key defined.', entry);
@@ -38,6 +38,10 @@ queue.forEach(entry => {
   } catch (e) {
     console.error('Failed to inject route on entry "%s".', entry, e);
   }
+});
+
+app.get('/', (req, res) => {
+  res.send('<h3>Welcome to the API Homepage!</h3>');
 });
 
 app.listen(config.http.port, config.http.host, () => {
