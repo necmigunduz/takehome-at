@@ -1,6 +1,6 @@
 import IRoute from '../types/IRoute';
 import { Router } from 'express';
-import { compareSync } from 'bcrypt';
+import { compareSync, hash } from 'bcrypt';
 import { attachSession } from '../middleware/auth';
 import { sequelize, Session, User } from '../services/db';
 import { randomBytes } from 'crypto';
@@ -114,7 +114,7 @@ const AuthRouter: IRoute = {
     // Attempt to register
     router.post('/register', async (req, res) => {
       const { username, password, displayName } = req.body;
-      console.log(req.body)
+
       if (!username || !password ) {
         return res.status(400).json({
           success: false,
@@ -135,11 +135,11 @@ const AuthRouter: IRoute = {
           message: "Username is already taken!"
         })
       }
-
+      const hashedPassword = await hash(password, 10);
       const newUser = await User.create({
         username,
         displayName,
-        password
+        password: hashedPassword
       }).catch(error => passError("Failed to create user", error, res))
       if (!newUser) {
         return passError("Returned user is void!", null, res)
