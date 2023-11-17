@@ -4,6 +4,7 @@ import { compareSync, hash } from 'bcrypt';
 import { attachSession } from '../middleware/auth';
 import { sequelize, Session, User } from '../services/db';
 import { randomBytes } from 'crypto';
+import { Response } from 'express-serve-static-core';
 
 const AuthRouter: IRoute = {
   route: '/auth',
@@ -166,22 +167,6 @@ const AuthRouter: IRoute = {
         message: 'Logged out successfully.',
       });
     });
-    // New route to fetch all users
-    router.get('/users', async (req, res) => {
-      try {
-        const users = await User.findAll({
-          attributes: { exclude: ['password'] },
-        });
-
-        return res.json({
-          success: true,
-          message: 'List of users retrieved successfully.',
-          data: users,
-        });
-      } catch (error) {
-        return passError('Failed to fetch users.', error, res);
-      }
-    });
 
     return router;
   },
@@ -189,7 +174,7 @@ const AuthRouter: IRoute = {
 
 export default AuthRouter;
 
-function passError(message, error, response) {
+function passError(message: string, error: null, response: Response<any, Record<string, any>, number>) {
   console.error(message, error);
   return response.status(500).json({
     success: false,
